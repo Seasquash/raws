@@ -1,7 +1,29 @@
-use clap::{App, Arg, SubCommand};
+use clap::{App, SubCommand, ArgMatches};
 use rusoto_core::Region;
 use rusoto_core::RusotoError;
 use rusoto_sqs::*;
+
+
+// subcommand_handler.... for sqs only
+fn sqs_subcommand_handler<T>(arg_matches : &ArgMatches<'_>) -> Result<(), RusotoError<T>> {
+    match arg_matches.subcommand_name() {
+        Some("list-queues") => list_queue_handler<T>(),
+        Some("list-messages") => list_message_handler(),
+        _ => unimplemented!()
+    }
+}
+fn list_queue_handler<T : ListQueuesError>() -> Result<(), RusotoError<T>> {
+    unimplemented!()
+}
+
+fn list_message_handler() -> Result<(), RusotoError<ReceiveMessageError>> {
+    unimplemented!()
+}
+
+// list-queues handler
+// list-message handler
+// download-message handler
+
 
 fn main() {
     let authors: &str = &vec!["Justin Lam", "Paolo Napolitano"].join(", ");
@@ -17,16 +39,17 @@ fn main() {
         )
         .get_matches();
 
+
     // list-queues
     // list-messages <queue-url>
     // download-messages <queue-url>
     if let Some(sqs_matches) = matches.subcommand_matches("sqs") {
+        let sqs = SqsClient::new(Region::ApSoutheast2);
+
         match sqs_matches.subcommand_name() {
             Some("list-queues") => {
-                let sqs = SqsClient::new(Region::ApSoutheast2);
                 let request = ListQueuesRequest::default();
-                let result: Result<ListQueuesResult, RusotoError<ListQueuesError>> =
-                    sqs.list_queues(request).sync();
+                let result = sqs.list_queues(request).sync();
                 match result {
                     Ok(list_queues_results) => list_queues_results
                         .queue_urls
@@ -41,7 +64,29 @@ fn main() {
                     }
                 }
             }
-            Some("list-messages") => println!("list-messages"),
+            Some("list-messages") => {
+                let request = ReceiveMessageRequest{
+                    queue_url: String::from("https://sqs.ap-southeast-2.amazonaws.com/954088256298/rust-aws-integration"),
+                    max_number_of_messages: Some(10),
+                    ..Default::default()
+                };
+                let result = sqs.receive_message(request).sync();
+                match result {
+                    Ok(message_results) => message_results
+                        .messages
+                        .unwrap_or_default()
+                        .iter()
+                        .map(|message| {
+                            if let Some(x) = &message.body {
+                                println!("{}", x);
+                            }
+                        })
+                        .collect(),
+                    Err(rusoto_error) => {
+                        dbg!(rusoto_error);
+                    }
+                }
+            },
             Some("download-messages") => println!("download-messages"),
             _ => println!("NOT ALLOWED"),
         }
