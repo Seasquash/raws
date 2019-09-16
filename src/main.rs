@@ -1,20 +1,28 @@
-use clap::{App, ArgMatches, SubCommand};
-use rusoto_core::Region;
-use rusoto_core::RusotoError;
+use clap::{App, Arg, ArgMatches, SubCommand};
+use rusoto_core::{Region, RusotoError};
 use rusoto_sqs::*;
-// use std::error::Error;
-use failure::Error;
+use std::env;
+use std::error::Error;
 
-// subcommand_handler.... for sqs only
-fn sqs_subcommand_handler(sqs: SqsClient, arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
+fn sqs_subcommand_handler(
+    sqs: SqsClient,
+    arg_matches: &ArgMatches<'_>,
+) -> Result<Vec<Option<String>>, Box<dyn Error>> {
     match arg_matches.subcommand_name() {
         Some("list-queues") => Ok(list_queue_handler(sqs)?),
-        Some("list-messages") => Ok(list_message_handler(sqs)?),
+        Some("list-messages") => Ok(list_message_handler(
+            sqs,
+            arg_matches
+                .subcommand_matches("list-messages")
+                .unwrap()
+                .value_of("queue-name")
+                .expect("Queue name not provided"),
+        )?),
         _ => unimplemented!(),
     }
 }
 
-fn list_queue_handler(sqs: SqsClient) -> Result<(), RusotoError<ListQueuesError>> {
+fn list_queue_handler(sqs: SqsClient) -> Result<Vec<Option<String>>, RusotoError<ListQueuesError>> {
     let request = ListQueuesRequest::default();
     Ok(sqs
         .list_queues(request)
@@ -22,18 +30,35 @@ fn list_queue_handler(sqs: SqsClient) -> Result<(), RusotoError<ListQueuesError>
         .queue_urls
         .unwrap_or_default()
         .iter()
-        .map(|url| url.split("/").last().unwrap_or_default())
-        .map(|name| println!("{}", name))
-        .collect())
+        .map(|url| url.split("/").last().map(|x| x.into()))
+        .collect::<Vec<Option<String>>>())
 }
 
-fn list_message_handler(sqs: SqsClient) -> Result<(), RusotoError<ReceiveMessageError>> {
-    unimplemented!()
+fn construct_queue_url(queue_name: &str) -> Result<String, Box<dyn Error>> {
+    Ok(String::from(format!(
+        "https://sqs.{region}.amazonaws.com/{account}/{queue_name}",
+        region = env::var("AWS_DEFAULT_REGION")?,
+        account = env::var("AWS_ACCOUNT")?,
+        queue_name = queue_name
+    )))
 }
 
-// list-queues handler
-// list-message handler
-// download-message handler
+// "https://sqs.ap-southeast-2.amazonaws.com/954088256298/rust-aws-integration"
+fn list_message_handler(sqs: SqsClient, queue_name: &str) -> Result<Vec<Option<String>>, Box<dyn Error>> {
+    let request = ReceiveMessageRequest {
+        queue_url: construct_queue_url(queue_name)?,
+        max_number_of_messages: Some(10),
+        ..Default::default()
+    };
+    Ok(sqs
+        .receive_message(request)
+        .sync()?
+        .messages
+        .unwrap_or_default()
+        .iter()
+        .map(|message| message.clone().body)
+        .collect::<Vec<Option<String>>>())
+}
 
 fn main() {
     let authors: &str = &vec!["Justin Lam", "Paolo Napolitano"].join(", ");
@@ -44,7 +69,10 @@ fn main() {
         .subcommand(
             SubCommand::with_name("sqs")
                 .subcommand(SubCommand::with_name("list-queues"))
-                .subcommand(SubCommand::with_name("list-messages"))
+                .subcommand(
+                    SubCommand::with_name("list-messages")
+                        .arg(Arg::with_name("queue-name").required(true).index(1)),
+                )
                 .subcommand(SubCommand::with_name("download-messages")),
         )
         .get_matches();
@@ -59,7 +87,7 @@ fn main() {
                 dbg!(e);
                 ()
             }
-            _ => (),
+            Ok(result) => println!("{:?}", result),
         }
     }
     // match sqs_matches.subcommand_name() {
