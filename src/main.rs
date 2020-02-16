@@ -7,7 +7,7 @@ use std::error::Error;
 fn sqs_subcommand_handler(
     sqs: SqsClient,
     arg_matches: &ArgMatches<'_>,
-) -> Result<Vec<Option<String>>, Box<dyn Error>> {
+) -> Result<Vec<String>, Box<dyn Error>> {
     match arg_matches.subcommand_name() {
         Some("list-queues") => Ok(list_queue_handler(sqs)?),
         Some("list-messages") => Ok(list_message_handler(
@@ -22,7 +22,7 @@ fn sqs_subcommand_handler(
     }
 }
 
-fn list_queue_handler(sqs: SqsClient) -> Result<Vec<Option<String>>, RusotoError<ListQueuesError>> {
+fn list_queue_handler(sqs: SqsClient) -> Result<Vec<String>, RusotoError<ListQueuesError>> {
     let request = ListQueuesRequest::default();
     Ok(sqs
         .list_queues(request)
@@ -31,7 +31,9 @@ fn list_queue_handler(sqs: SqsClient) -> Result<Vec<Option<String>>, RusotoError
         .unwrap_or_default()
         .iter()
         .map(|url| url.split("/").last().map(|x| x.into()))
-        .collect::<Vec<Option<String>>>())
+        .filter_map(|m| m)
+        .collect::<Vec<String>>()
+    )
 }
 
 fn construct_queue_url(queue_name: &str) -> Result<String, Box<dyn Error>> {
@@ -43,21 +45,53 @@ fn construct_queue_url(queue_name: &str) -> Result<String, Box<dyn Error>> {
     )))
 }
 
-// "https://sqs.ap-southeast-2.amazonaws.com/954088256298/rust-aws-integration"
-fn list_message_handler(sqs: SqsClient, queue_name: &str) -> Result<Vec<Option<String>>, Box<dyn Error>> {
-    let request = ReceiveMessageRequest {
-        queue_url: construct_queue_url(queue_name)?,
-        max_number_of_messages: Some(10),
-        ..Default::default()
-    };
-    Ok(sqs
-        .receive_message(request)
+fn retrieve_messages(client: &SqsClient, request: &ReceiveMessageRequest) -> Result<Vec<Option<String>>, Box<dyn Error>> {
+    Ok(client
+        .receive_message(request.clone())
         .sync()?
         .messages
         .unwrap_or_default()
         .iter()
         .map(|message| message.clone().body)
         .collect::<Vec<Option<String>>>())
+}
+
+fn retrieve_all_messages(client: &SqsClient, request: &ReceiveMessageRequest, result: Vec<String>) -> Vec<String> {
+    let msgs = retrieve_messages(client, request)
+        .map(|messages| {
+            messages
+                .iter()
+                .cloned()
+                .filter_map(|m| m)
+                .collect::<Vec<String>>()
+        });
+    // if Err or Vec is empty, return result
+    // otherwise, call retrieve_all_messages passing results + Vec
+    match msgs {
+        Ok(v) => {
+            if v.is_empty() {
+                result
+            } else {
+                let new_result = result.into_iter().chain(v.into_iter()).collect();
+                retrieve_all_messages(&client, &request, new_result)
+            }
+        },
+        Err(e) => {
+            println!("An error occurred: {}", e);
+            result
+        }
+    }
+}
+
+// "https://sqs.ap-southeast-2.amazonaws.com/954088256298/rust-aws-integration"
+fn list_message_handler(sqs: SqsClient, queue_name: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    let request = ReceiveMessageRequest {
+        queue_url: construct_queue_url(queue_name)?,
+        max_number_of_messages: Some(10),
+        ..Default::default()
+    };
+    let messages = retrieve_all_messages(&sqs, &request, vec!());
+    Ok(messages)
 }
 
 fn main() {
