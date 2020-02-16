@@ -11,17 +11,28 @@ pub fn handler(sqs: SqsClient, queue_name: &str) -> Result<Vec<String>, Box<dyn 
     ..Default::default()
   };
   let messages = retrieve_all_messages(&sqs, &request, vec!());
+  // For each message, get the receipt handle, call the delete message
+  // and print the message body
   messages
     .iter()
     .map(|m: &RawsMessage| {
-      m.receipt_handle
-      .iter()
-      .map(|h| {
-        delete_message(&sqs, queue_name, h.into())
-      })
+      let msg = m.clone();
+      match msg.receipt_handle {
+        Some(receipt) => {
+          let deleted = delete_message(&sqs, queue_name, receipt.into());
+          match deleted {
+            Ok(()) => {
+              println!("Deleted message: {}", msg.body.unwrap_or("NO MESSAGE FOUND".into()));
+            },
+            _ => {
+              println!("Failed to delete message: {}", msg.body.unwrap_or("NO MESSAGE FOUND".into()));
+            }
+          }
+        },
+        None => ()
+      }
     })
     .for_each(drop);
-    
   Ok(vec!())
 }
 

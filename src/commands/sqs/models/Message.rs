@@ -2,7 +2,7 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct RawsMessage {
-  body: Option<String>,
+  pub body: Option<String>,
   message_id: Option<String>,
   pub receipt_handle: Option<String>
 }
