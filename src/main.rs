@@ -4,7 +4,7 @@ use rusoto_sqs::*;
 use std::error::Error;
 
 mod commands;
-use commands::sqs::{list_message, list_queue};
+use commands::sqs::{ list_message, list_queue, download_message };
 
 fn sqs_subcommand_handler(
     sqs: SqsClient,
@@ -19,6 +19,14 @@ fn sqs_subcommand_handler(
             sqs,
             arg_matches
                 .subcommand_matches("list-messages")
+                .unwrap()
+                .value_of("queue-name")
+                .expect("Queue name not provided"),
+        )?),
+        Some("download-messages") => Ok(download_message::handler(
+            sqs,
+            arg_matches
+                .subcommand_matches("download-messages")
                 .unwrap()
                 .value_of("queue-name")
                 .expect("Queue name not provided"),
@@ -40,7 +48,10 @@ fn main() {
                     SubCommand::with_name("list-messages")
                         .arg(Arg::with_name("queue-name").required(true).index(1)),
                 )
-                .subcommand(SubCommand::with_name("download-messages")),
+                .subcommand(
+                    SubCommand::with_name("download-messages")
+                        .arg(Arg::with_name("queue-name").required(true).index(1)),
+                )
         )
         .get_matches();
     let sqs = SqsClient::new(Region::ApSoutheast2);

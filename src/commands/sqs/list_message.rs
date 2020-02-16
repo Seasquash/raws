@@ -1,16 +1,7 @@
 use std::error::Error;
-use std::env;
 use rusoto_sqs::*;
 use super::models::Message::RawsMessage;
-
-fn construct_queue_url(queue_name: &str) -> Result<String, Box<dyn Error>> {
-  Ok(String::from(format!(
-      "https://sqs.{region}.amazonaws.com/{account}/{queue_name}",
-      region = env::var("AWS_DEFAULT_REGION").expect("AWS REGION NOT FOUND"),
-      account = env::var("AWS_ACCOUNT").expect("AWS ACCOUNT NOT FOUND"),
-      queue_name = queue_name
-  )))
-}
+use super::common::construct_queue_url;
 
 fn retrieve_messages(client: &SqsClient, request: &ReceiveMessageRequest) -> Result<Vec<RawsMessage>, Box<dyn Error>> {
   Ok(client
@@ -31,7 +22,7 @@ fn retrieve_messages(client: &SqsClient, request: &ReceiveMessageRequest) -> Res
   )
 }
 
-fn retrieve_all_messages(client: &SqsClient, request: &ReceiveMessageRequest, result: Vec<RawsMessage>) -> Vec<RawsMessage> {
+pub fn retrieve_all_messages(client: &SqsClient, request: &ReceiveMessageRequest, result: Vec<RawsMessage>) -> Vec<RawsMessage> {
   let msgs = retrieve_messages(client, request);
   // if Err or Vec is empty, return result
   // otherwise, call retrieve_all_messages passing results + Vec

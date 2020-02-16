@@ -4,7 +4,7 @@ use std::fmt;
 pub struct RawsMessage {
   body: Option<String>,
   message_id: Option<String>,
-  receipt_handle: Option<String>
+  pub receipt_handle: Option<String>
 }
 
 impl RawsMessage {
