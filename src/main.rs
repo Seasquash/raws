@@ -4,6 +4,9 @@ use rusoto_sqs::*;
 use std::env;
 use std::error::Error;
 
+mod commands;
+use commands::sqs::models::Message::RawsMessage;
+
 fn sqs_subcommand_handler(
     sqs: SqsClient,
     arg_matches: &ArgMatches<'_>,
@@ -45,26 +48,27 @@ fn construct_queue_url(queue_name: &str) -> Result<String, Box<dyn Error>> {
     )))
 }
 
-fn retrieve_messages(client: &SqsClient, request: &ReceiveMessageRequest) -> Result<Vec<Option<String>>, Box<dyn Error>> {
+fn retrieve_messages(client: &SqsClient, request: &ReceiveMessageRequest) -> Result<Vec<RawsMessage>, Box<dyn Error>> {
     Ok(client
         .receive_message(request.clone())
         .sync()?
         .messages
         .unwrap_or_default()
         .iter()
-        .map(|message| message.clone().body)
-        .collect::<Vec<Option<String>>>())
+        .filter_map(|message: &Message| {
+            let aws_message = message.clone();
+            Some(RawsMessage::create(
+                aws_message.body,
+                aws_message.message_id,
+                aws_message.receipt_handle
+            ))
+        })
+        .collect::<Vec<RawsMessage>>()
+    )
 }
 
-fn retrieve_all_messages(client: &SqsClient, request: &ReceiveMessageRequest, result: Vec<String>) -> Vec<String> {
-    let msgs = retrieve_messages(client, request)
-        .map(|messages| {
-            messages
-                .iter()
-                .cloned()
-                .filter_map(|m| m)
-                .collect::<Vec<String>>()
-        });
+fn retrieve_all_messages(client: &SqsClient, request: &ReceiveMessageRequest, result: Vec<RawsMessage>) -> Vec<RawsMessage> {
+    let msgs = retrieve_messages(client, request);
     // if Err or Vec is empty, return result
     // otherwise, call retrieve_all_messages passing results + Vec
     match msgs {
@@ -90,7 +94,10 @@ fn list_message_handler(sqs: SqsClient, queue_name: &str) -> Result<Vec<String>,
         max_number_of_messages: Some(10),
         ..Default::default()
     };
-    let messages = retrieve_all_messages(&sqs, &request, vec!());
+    let messages = retrieve_all_messages(&sqs, &request, vec!())
+        .iter()
+        .map(|msg| format!("{}", msg))
+        .collect::<Vec<String>>();
     Ok(messages)
 }
 
