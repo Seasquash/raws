@@ -6,7 +6,7 @@ use super::common::construct_queue_url;
 use super::models::Message::RawsMessage;
 use super::list_message::retrieve_all_messages;
 
-pub fn handler(sqs: SqsClient, queue_name: &str) -> Result<Vec<String>, Box<dyn Error>> {
+pub fn handler(sqs: SqsClient, queue_name: &str, to_delete: bool) -> Result<Vec<String>, Box<dyn Error>> {
   let request = ReceiveMessageRequest {
     queue_url: construct_queue_url(queue_name)?,
     max_number_of_messages: Some(10),
@@ -18,29 +18,34 @@ pub fn handler(sqs: SqsClient, queue_name: &str) -> Result<Vec<String>, Box<dyn 
   let path = "sqs_messages.txt";
   let mut output = File::create(path)?;
 
-  messages
+  let result = messages
     .iter()
     .map(|m: &RawsMessage| {
       let msg = m.clone();
       match msg.receipt_handle {
         Some(receipt) => {
-          let deleted = delete_message(&sqs, queue_name, receipt.into());
-          match deleted {
-            Ok(()) => {
-              let text_to_write = msg.body.unwrap_or("NO MESSAGE FOUND".into());
-              write!(output, "{}\n\n", text_to_write);
-              println!("Deleted message: {}", text_to_write);
-            },
-            _ => {
-              println!("Failed to delete message: {}", msg.body.unwrap_or("NO MESSAGE FOUND".into()));
+          let text_to_write = msg.body.unwrap_or("NO MESSAGE FOUND".into());
+          if to_delete {
+            let deleted = delete_message(&sqs, queue_name, receipt.into());
+            match deleted {
+              Ok(()) => {
+                write!(output, "{}\n\n", text_to_write);
+                format!("Deleted message: {}", text_to_write)
+              },
+              _ => {
+                format!("Failed to delete message: {}", text_to_write)
+              }
             }
+          } else {
+            write!(output, "{}\n\n", text_to_write);
+            format!("Message downloaded: {}", text_to_write)
           }
         },
-        None => ()
+        None => "No messages found".into()
       }
     })
-    .for_each(drop);
-  Ok(vec!())
+    .collect::<Vec<String>>();
+  Ok(result)
 }
 
 fn delete_message(sqs: &SqsClient, queue_name: &str, receipt_handle: String) -> Result<(), Box<dyn Error>> {

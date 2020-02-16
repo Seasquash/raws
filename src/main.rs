@@ -30,6 +30,10 @@ fn sqs_subcommand_handler(
                 .unwrap()
                 .value_of("queue-name")
                 .expect("Queue name not provided"),
+            arg_matches
+                .subcommand_matches("download-messages")
+                .unwrap()
+                .is_present("delete")
         )?),
         _ => unimplemented!(),
     }
@@ -50,7 +54,8 @@ fn main() {
                 )
                 .subcommand(
                     SubCommand::with_name("download-messages")
-                        .arg(Arg::with_name("queue-name").required(true).index(1)),
+                        .arg(Arg::with_name("queue-name").required(true).index(1))
+                        .arg(Arg::from_usage("--delete").allow_hyphen_values(true)),
                 )
         )
         .get_matches();
