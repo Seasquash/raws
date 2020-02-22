@@ -1,6 +1,6 @@
 use std::error::Error;
 use rusoto_sqs::*;
-use super::models::Message::RawsMessage;
+use super::models::message::RawsMessage;
 use super::common::construct_queue_url;
 
 fn retrieve_messages(client: &SqsClient, request: &ReceiveMessageRequest) -> Result<Vec<RawsMessage>, Box<dyn Error>> {
@@ -10,7 +10,7 @@ fn retrieve_messages(client: &SqsClient, request: &ReceiveMessageRequest) -> Res
       .messages
       .unwrap_or_default()
       .iter()
-      .filter_map(|message: &Message| {
+      .flat_map(|message: &Message| {
           let aws_message = message.clone();
           Some(RawsMessage::create(
               aws_message.body,

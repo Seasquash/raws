@@ -9,8 +9,7 @@ pub fn handler(sqs: SqsClient) -> Result<Vec<String>, RusotoError<ListQueuesErro
       .queue_urls
       .unwrap_or_default()
       .iter()
-      .map(|url| url.split("/").last().map(|x| x.into()))
-      .filter_map(|m| m)
+      .flat_map(|url| url.split('/').last().map(|x| x.into()))
       .collect::<Vec<String>>()
   )
 }

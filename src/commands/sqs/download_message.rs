@@ -1,10 +1,11 @@
 use std::error::Error;
 use std::fs::File;
-use std::io::Write;
 use rusoto_sqs::*;
 use super::common::construct_queue_url;
-use super::models::Message::RawsMessage;
+use super::models::message::RawsMessage;
 use super::list_message::retrieve_all_messages;
+
+use crate::output::writers::write_to_file;
 
 pub fn handler(sqs: SqsClient, queue_name: &str, to_delete: bool) -> Result<Vec<String>, Box<dyn Error>> {
   let request = ReceiveMessageRequest {
@@ -16,7 +17,7 @@ pub fn handler(sqs: SqsClient, queue_name: &str, to_delete: bool) -> Result<Vec<
   // For each message, get the receipt handle, call the delete message,
   // print the message body and save it to a file
   let path = "sqs_messages.txt";
-  let mut output = File::create(path)?;
+  let output = File::create(path)?;
 
   let result = messages
     .iter()
@@ -24,12 +25,11 @@ pub fn handler(sqs: SqsClient, queue_name: &str, to_delete: bool) -> Result<Vec<
       let msg = m.clone();
       match msg.receipt_handle {
         Some(receipt) => {
-          let text_to_write = msg.body.unwrap_or("NO MESSAGE FOUND".into());
+          let text_to_write = msg.body.unwrap_or_else(|| "NO MESSAGE FOUND".into());
           if to_delete {
-            let deleted = delete_message(&sqs, queue_name, receipt.into());
-            match deleted {
+            match delete_message(&sqs, queue_name, receipt) {
               Ok(()) => {
-                write!(output, "{}\n\n", text_to_write);
+                write_to_file(&output, &text_to_write);
                 format!("Deleted message: {}", text_to_write)
               },
               _ => {
@@ -37,7 +37,7 @@ pub fn handler(sqs: SqsClient, queue_name: &str, to_delete: bool) -> Result<Vec<
               }
             }
           } else {
-            write!(output, "{}\n\n", text_to_write);
+            write_to_file(&output, &text_to_write);
             format!("Message downloaded: {}", text_to_write)
           }
         },
