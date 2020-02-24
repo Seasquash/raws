@@ -14,9 +14,13 @@ pub fn handler(sqs: SqsClient, queue_name: &str) -> Result<Vec<String>, Box<dyn 
     .sync()?
     .attributes
     .unwrap_or_default();
-  
+
   if let Some(policy) = get_sqs_policy(attributes) {
-    Ok(vec!(policy.statement[0].condition.arn_equals.source_arn.clone()))
+    if let Some(arn) = policy.get_source_arn() {
+      Ok(vec!(arn))
+    } else {
+      Ok(vec!())
+    }
   } else {
     Ok(vec!())
   }

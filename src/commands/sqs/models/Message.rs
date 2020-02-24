@@ -32,31 +32,42 @@ impl fmt::Display for RawsMessage {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct RawsSqsSourceArn {
+struct RawsSqsSourceArn {
   #[serde(rename(deserialize = "aws:SourceArn"))]
-  pub source_arn: String
+  source_arn: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-pub struct RawsSqsCondition {
-  pub arn_equals: RawsSqsSourceArn
+struct RawsSqsCondition {
+  arn_equals: Option<RawsSqsSourceArn>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-pub struct RawsSqsStatement {
+struct RawsSqsStatement {
   sid: String,
   action: String,
   resource: String,
-  pub condition: RawsSqsCondition
+  condition: Option<RawsSqsCondition>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct RawsSqsPolicy {
   id: String,
-  pub statement: Vec<RawsSqsStatement>
+  statement: Vec<RawsSqsStatement>
+}
+
+impl RawsSqsPolicy {
+  pub fn get_source_arn(&self) -> Option<String> {
+    let arn = self
+      .statement[0]
+      .condition.as_ref()?
+      .arn_equals.as_ref()?
+      .source_arn.clone();
+    Some(arn)
+  }
 }
 
 // {
