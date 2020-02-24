@@ -1,4 +1,5 @@
 use std::fmt;
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone)]
 pub struct RawsMessage {
@@ -29,3 +30,44 @@ impl fmt::Display for RawsMessage {
     }
   }
 }
+
+#[derive(Serialize, Deserialize)]
+struct RawsSqsCondition {
+  // aws:SourceArn
+  source_arn: String
+}
+
+#[derive(Serialize, Deserialize)]
+struct RawsSqsStatement {
+  sid: String,
+  action: String,
+  resource: String,
+  condition: RawsSqsCondition
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct RawsSqsPolicy {
+  id: String,
+  statement: Vec<RawsSqsStatement>
+}
+
+// {
+//   "Version": "2012-10-17",
+//   "Id": "arn:aws:sqs:ap-southeast-2:954088256298:rust-aws-integration/SQSDefaultPolicy",
+//   "Statement": [
+//     {
+//       "Sid": "Sid1582345004954",
+//       "Effect": "Allow",
+//       "Principal": {
+//         "AWS": "*"
+//       },
+//       "Action": "SQS:SendMessage",
+//       "Resource": "arn:aws:sqs:ap-southeast-2:954088256298:rust-aws-integration",
+//       "Condition": {
+//         "ArnEquals": {
+//           "aws:SourceArn": "arn:aws:sns:ap-southeast-2:954088256298:rust-aws-integration"
+//         }
+//       }
+//     }
+//   ]
+// }

@@ -5,7 +5,7 @@ use std::error::Error;
 
 mod commands;
 mod output;
-use commands::sqs::{ list_message, list_queue, download_message };
+use commands::sqs::{ list_message, list_queue, download_message, info_queue };
 use output::formatters::output_formatter;
 
 fn sqs_subcommand_handler(
@@ -17,6 +17,14 @@ fn sqs_subcommand_handler(
     // download-messages <queue-url>
     match arg_matches.subcommand_name() {
         Some("list-queues") => Ok(list_queue::handler(sqs)?),
+        Some("info-queue") => Ok(info_queue::handler(
+            sqs,
+            arg_matches
+                .subcommand_matches("info-queue")
+                .unwrap()
+                .value_of("queue-name")
+                .expect("Queue name not provided"),
+        )?),
         Some("list-messages") => Ok(list_message::handler(
             sqs,
             arg_matches
@@ -50,6 +58,10 @@ fn main() {
         .subcommand(
             SubCommand::with_name("sqs")
                 .subcommand(SubCommand::with_name("list-queues"))
+                .subcommand(
+                    SubCommand::with_name("info-queue")
+                        .arg(Arg::with_name("queue-name").required(true).index(1)),
+                )
                 .subcommand(
                     SubCommand::with_name("list-messages")
                         .arg(Arg::with_name("queue-name").required(true).index(1)),
