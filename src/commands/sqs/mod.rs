@@ -3,4 +3,5 @@ pub mod list_queue;
 pub mod info_queue;
 pub mod list_message;
 pub mod download_message;
+pub mod replay_message;
 mod common;

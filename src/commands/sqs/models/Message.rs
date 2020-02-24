@@ -31,24 +31,32 @@ impl fmt::Display for RawsMessage {
   }
 }
 
-#[derive(Serialize, Deserialize)]
-struct RawsSqsCondition {
-  // aws:SourceArn
-  source_arn: String
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RawsSqsSourceArn {
+  #[serde(rename(deserialize = "aws:SourceArn"))]
+  pub source_arn: String
 }
 
-#[derive(Serialize, Deserialize)]
-struct RawsSqsStatement {
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct RawsSqsCondition {
+  pub arn_equals: RawsSqsSourceArn
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
+pub struct RawsSqsStatement {
   sid: String,
   action: String,
   resource: String,
-  condition: RawsSqsCondition
+  pub condition: RawsSqsCondition
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct RawsSqsPolicy {
   id: String,
-  statement: Vec<RawsSqsStatement>
+  pub statement: Vec<RawsSqsStatement>
 }
 
 // {

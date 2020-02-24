@@ -5,7 +5,7 @@ use std::error::Error;
 
 mod commands;
 mod output;
-use commands::sqs::{ list_message, list_queue, download_message, info_queue };
+use commands::sqs::{ list_message, list_queue, download_message, info_queue, replay_message };
 use output::formatters::output_formatter;
 
 fn sqs_subcommand_handler(
@@ -45,6 +45,14 @@ fn sqs_subcommand_handler(
                 .unwrap()
                 .is_present("delete")
         )?),
+        Some("replay-message") => Ok(replay_message::handler(
+            sqs,
+            arg_matches
+                .subcommand_matches("replay-message")
+                .unwrap()
+                .value_of("queue-name")
+                .expect("Queue name not provided"),
+        )?),
         _ => unimplemented!(),
     }
 }
@@ -70,6 +78,10 @@ fn main() {
                     SubCommand::with_name("download-messages")
                         .arg(Arg::with_name("queue-name").required(true).index(1))
                         .arg(Arg::from_usage("--delete").allow_hyphen_values(true)),
+                )
+                .subcommand(
+                    SubCommand::with_name("replay-message")
+                        .arg(Arg::with_name("queue-name").required(true).index(1)),
                 )
         )
         .get_matches();

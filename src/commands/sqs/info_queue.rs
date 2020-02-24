@@ -8,13 +8,14 @@ pub fn handler(sqs: SqsClient, queue_name: &str) -> Result<Vec<String>, Box<dyn 
     queue_url: construct_queue_url(queue_name)?,
     attribute_names: Some(vec!("All".into()))
   };
+
   Ok(sqs
-      .get_queue_attributes(request)
-      .sync()?
-      .attributes
-      .unwrap_or_default()
-      .iter()
-      .map(|(k, v)| format!("{}: {}", k, v))
-      .collect::<Vec<String>>()
+    .get_queue_attributes(request)
+    .sync()?
+    .attributes
+    .unwrap_or_default()
+    .iter()
+    .map(|(k, v)| format!("{}: {}", k, v))
+    .collect::<Vec<String>>()
   )
 }
