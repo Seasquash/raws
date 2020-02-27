@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs::File;
 use rusoto_sqs::*;
 use super::common::construct_queue_url;
-use super::models::message::RawsMessage;
+use super::models::message::{ RawsMessage, RawsSnsMessage };
 use super::list_message::retrieve_all_messages;
 
 use crate::output::writers::write_to_file;
@@ -25,20 +25,22 @@ pub fn handler(sqs: SqsClient, queue_name: &str, to_delete: bool) -> Result<Vec<
       let msg = m.clone();
       match msg.receipt_handle {
         Some(receipt) => {
-          let text_to_write = msg.body.unwrap_or_else(|| "NO MESSAGE FOUND".into());
+          let text_to_write = msg.body.unwrap_or_else(|| RawsSnsMessage {
+            message: "NO MESSAGE FOUND".into()
+          });
           if to_delete {
             match delete_message(&sqs, queue_name, receipt) {
               Ok(()) => {
-                write_to_file(&output, &text_to_write);
-                format!("Deleted message: {}", text_to_write)
+                write_to_file(&output, &text_to_write.message);
+                format!("Deleted message: {}", &text_to_write.message)
               },
               _ => {
-                format!("Failed to delete message: {}", text_to_write)
+                format!("Failed to delete message: {}", text_to_write.message)
               }
             }
           } else {
-            write_to_file(&output, &text_to_write);
-            format!("Message downloaded: {}", text_to_write)
+            write_to_file(&output, &text_to_write.message);
+            format!("Message downloaded: {}", text_to_write.message)
           }
         },
         None => "No messages found".into()

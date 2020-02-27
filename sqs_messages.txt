@@ -1,0 +1,12 @@
+{
+  "Type" : "Notification",
+  "MessageId" : "4af243f5-49cb-53f7-b01e-1524d204837c",
+  "TopicArn" : "arn:aws:sns:ap-southeast-2:954088256298:rust-aws-integration",
+  "Message" : "This is a test",
+  "Timestamp" : "2020-02-27T10:27:27.374Z",
+  "SignatureVersion" : "1",
+  "Signature" : "HxLuwUH0mRnt3Si7QvLvwxsVUdDXiCOc3LI1C9lBmvFxtPbchNISEVjy/km96fNVdgxmvyRcZbWCJvqI3dmOTcwDEnUgfVvg8bWoI/mS13F9z2MHxKARazih5RRXmRf7GmZyxYbw4GJQ6dJmWdzRtXoi7WzacPN6oH9bbt2E8MKM9CDGeY4R0zbd5TDX3k3pn3fIAyBHqQenA1cTDqp1Gkeu8rLp/KSAw2uD6dx73262Wbl8xYfyql/8e1hCaJuM60sV7D/miNT7Fq4D883q00xHh1NgcNb5+hZ/1zOwTZOb4aEOCM7QzImVoTVqt/VNS//TPLCdpuCs6JLXh1QVAQ==",
+  "SigningCertURL" : "https://sns.ap-southeast-2.amazonaws.com/SimpleNotificationService-a86cb10b4e1f29c941702d737128f7b6.pem",
+  "UnsubscribeURL" : "https://sns.ap-southeast-2.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:ap-southeast-2:954088256298:rust-aws-integration:5a29d1aa-f972-44ee-920f-d439e0aa1c67"
+}
+
